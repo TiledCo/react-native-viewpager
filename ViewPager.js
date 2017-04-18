@@ -146,16 +146,16 @@ var ViewPager = React.createClass({
     if (nextProps.dataSource) {
       var maxPage = nextProps.dataSource.getPageCount() - 1;
       var constrainedPage = Math.max(0, Math.min(controledPageChanged ? nextProps.selectedPage : this.state.currentPage, maxPage));
-      
+
       if (!nextProps.isLoop) {
         this.state.scrollValue.setValue(constrainedPage > 0 ? 1 : 0);
       }
 
       this.childIndex = Math.min(this.childIndex, constrainedPage);
       this.fling = false;
-      
+
       if (controledPageChanged) {
-        this.goToPage( nextProps.selectedPage );
+        this._goToPage( nextProps.selectedPage, nextProps, false );
       } else {
         this.setState({
           currentPage: constrainedPage,
@@ -174,22 +174,22 @@ var ViewPager = React.createClass({
     }
   },
 
-  goToPage(pageNumber, animate = true) {
-
-    var pageCount = this.props.dataSource.getPageCount();
-    if (pageNumber < 0 || pageNumber >= pageCount) {
-      console.error('Invalid page number: ', pageNumber);
-      return
-    }
+  _goToPage(pageNumber, props, animate = true) {
+    var pageCount = props.dataSource.getPageCount();
 
     var step = pageNumber - this.state.currentPage;
     this.movePage(step, null, animate);
   },
 
-  movePage(step, gs, animate = true) {
-    var pageCount = this.props.dataSource.getPageCount();
+  goToPage(pageNumber, animate = true) {
+
+    this._goToPage(pageNumber, this.props, animate)
+  },
+
+  _movePage(step, gs, props, animate = true) {
+    var pageCount = props.dataSource.getPageCount()
     var pageNumber = this.state.currentPage + step;
-    if (this.props.isLoop) {
+    if (props.isLoop) {
       pageNumber = (pageNumber + pageCount) % pageCount;
     } else {
       pageNumber = Math.min(Math.max(0, pageNumber), pageCount - 1);
@@ -197,7 +197,7 @@ var ViewPager = React.createClass({
 
     const moved = pageNumber !== this.state.currentPage;
     const scrollStep = (moved ? step : 0) + this.childIndex;
-    const nextChildIdx = (pageNumber > 0 || this.props.isLoop) ? 1 : 0;
+    const nextChildIdx = (pageNumber > 0 || props.isLoop) ? 1 : 0;
 
     const postChange = () => {
       this.fling = false;
@@ -210,17 +210,21 @@ var ViewPager = React.createClass({
 
     if (animate) {
       this.fling = true;
-      this.props.animation(this.state.scrollValue, scrollStep, gs)
+      props.animation(this.state.scrollValue, scrollStep, gs)
         .start((event) => {
           if (event.finished) {
             postChange();
           }
-          moved && this.props.onChangePage && this.props.onChangePage(pageNumber);
+          moved && props.onChangePage && props.onChangePage(pageNumber);
         });
     } else {
       postChange();
-      moved && this.props.onChangePage && this.props.onChangePage(pageNumber);
+      moved && props.onChangePage && props.onChangePage(pageNumber);
     }
+  },
+
+  movePage(step, gs, animate = true) {
+    this._movePage(step, gs, this.props, animate)
   },
 
   getCurrentPage() {
